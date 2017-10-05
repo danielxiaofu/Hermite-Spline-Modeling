@@ -1,0 +1,327 @@
+#include "Hermite.h"
+
+Segment::Segment()
+{
+}
+
+Segment::Segment(ControlPoint startPoint, ControlPoint endPoint)
+{
+	setStartPoint(startPoint);
+	setEndPoint(endPoint);
+}
+
+void Segment::setStartPoint(ControlPoint startPoint)
+{
+	VecCopy(y0, startPoint.point);
+	VecCopy(s0, startPoint.tangent);
+	computeCurve();
+}
+
+void Segment::setEndPoint(ControlPoint endPoint)
+{
+	VecCopy(y1, endPoint.point);
+	VecCopy(s1, endPoint.tangent);
+	computeCurve();
+}
+
+void Segment::computeCurve()
+{
+	VecCopy(d, y0); // d = y0
+	VecCopy(c, s0); // c = s0
+	// a = -2(y1 - y0) + s0 + s1
+	Vector temp;
+	VecSubtract(temp, y1, y0);
+	VecScale(temp, -2);
+	VecAdd(temp, temp, s0);
+	VecAdd(a, temp, s1);
+	// b = 3(y1 - y0) - 2 * s0 - s1
+	VecSubtract(temp, y1, y0);
+	VecScale(temp, 3);
+	Vector temp2;
+	VecCopy(temp2, s0);
+	VecScale(temp2, 2);
+	VecSubtract(temp, temp, temp2);
+	VecSubtract(b, temp, s1);
+}
+
+void Segment::getPosition(Vector result, double t)
+{
+	if (t <= 0)
+		VecCopy(result, y0);
+	else if ( t > 0 && t < 1)
+	{
+		Vector aTemp, bTemp, cTemp;
+		VecCopy(aTemp, a);
+		VecCopy(bTemp, b);
+		VecCopy(cTemp, c);
+		VecScale(aTemp, t * t * t);
+		VecScale(bTemp, t * t);
+		VecScale(cTemp, t);
+		VecAdd(result, aTemp, bTemp);
+		VecAdd(result, result, cTemp);
+		VecAdd(result, result, d);
+	} else
+		VecCopy(result, y1);
+}
+
+void Segment::getTangent(Vector result, double t)
+{
+	if (t <= 0)
+		VecCopy(result, s0);
+	else if (t > 0 && t < 1)
+	{
+		Vector aTemp, bTemp;
+		VecCopy(aTemp, a);
+		VecCopy(bTemp, b);
+		VecScale(aTemp, 3 * t * t);
+		VecScale(bTemp, 2 * t);
+		VecAdd(result, aTemp, bTemp);
+		VecAdd(result, result, c);
+	}
+	else
+		VecCopy(result, s1);
+}
+
+
+
+Hermite::Hermite(const std::string& name) :
+	BaseObject(name)
+{
+	
+}
+
+void Hermite::addControlPoint(ControlPoint controlPoint)
+{
+	if (controlPoints.size() >= 40)
+	{
+		animTcl::OutputMessage("Add control point failed, maximum control points reached");
+		return;
+	}
+
+	if (controlPoints.size() > 0)
+	{
+		ControlPoint last = controlPoints.back();
+		addSegment(Segment(last, controlPoint));
+	}
+	controlPoints.push_back(controlPoint);
+	
+}
+
+void Hermite::addControlPoint(double px, double py, double pz, double sx, double sy, double sz)
+{
+	addControlPoint(ControlPoint(px, py, pz, sx, sy, sz));
+}
+
+// only positions are provided, compute tangent using Catmull-Rom initialization
+void Hermite::addControlPoint(double px, double py, double pz)
+{
+
+	if (controlPoints.size() == 0) // no point
+	{
+		addControlPoint(ControlPoint(px, py, pz, 0, 0, 0));
+	}
+	else if (controlPoints.size() == 1) // one point
+	{
+		Vector point;
+		setVector(point, px, py, pz);
+		Vector tangent;
+		VecSubtract(tangent, point, controlPoints[0].point);
+		VecScale(tangent, 0.5);
+		addControlPoint(ControlPoint(point, tangent));
+	}
+	else // more than one point, use cr initialize
+	{
+		// sn-1 = 2(yn-1 - yn-2) - (yn-1 - yn-3)/2
+		int n = controlPoints.size();
+		Vector temp1, temp2, point, tangent;
+		setVector(point, px, py, pz);
+		VecSubtract(temp1, point, controlPoints[n - 1].point);
+		VecScale(temp1, 2);
+		VecSubtract(temp2, point, controlPoints[n - 2].point);
+		VecScale(temp2, 0.5);
+		VecSubtract(tangent, temp1, temp2);
+		addControlPoint(ControlPoint(point, tangent));
+	}
+}
+
+void Hermite::display(GLenum mode)
+{
+	for (Segment segment : segments)
+	{
+		Vector p1, p2;
+		segment.getPosition(p2, 0);
+
+		for (int i = 1; i < numOfSamples; i++)
+		{
+			VecCopy(p1, p2);
+			segment.getPosition(p2, i / (double)(numOfSamples - 1));
+			glLineWidth(5);
+			glBegin(GL_LINES);
+			glVertex3d(p1[0], p1[1], p1[2]);
+			glVertex3d(p2[0], p2[1], p2[2]);
+			glEnd();
+			
+
+		}
+	}
+}
+
+bool Hermite::setPoint(int index, double x, double y, double z)
+{
+	if (index >= controlPoints.size())
+		return false;
+	Vector newPoint;
+	newPoint[0] = x;
+	newPoint[1] = y;
+	newPoint[2] = z;
+
+	VecCopy(controlPoints[index].point, newPoint);
+	recomputeSegment(index);
+	generateLengthTable();
+	return true;
+}
+
+bool Hermite::setTangent(int index, double x, double y, double z)
+{
+	if (index >= controlPoints.size())
+		return false;
+	Vector newTangent;
+	newTangent[0] = x;
+	newTangent[1] = y;
+	newTangent[2] = z;
+
+	VecCopy(controlPoints[index].tangent, newTangent);
+	recomputeSegment(index);
+	generateLengthTable();
+	return true;
+}
+
+void Hermite::getPosition(Vector result, double t)
+{
+	if (segments.size() == 0) {
+		zeroVector(result);
+		return;
+	}
+
+	if (t <= 0)
+		VecCopy(result, segments[0].y0);
+	else if (t > 0 && t < 1)
+	{
+		double segmentLength = 1.0f / segments.size();
+		int segmentIndex = (int)(t * segments.size());
+		double localT = abs(remainder(t, segmentLength));
+		segments[segmentIndex].getPosition(result, localT);
+		//animTcl::OutputMessage("local T = %f", localT);
+	}
+	else
+		VecCopy(result, segments[segments.size() - 1].y1);
+	
+}
+
+void Hermite::generateLengthTable()
+{
+	Vector temp1, temp2, temp3;
+	double tEntry = 0;
+	double cumulateL = 0;
+
+	// first entry (t is 0);
+	lengthMap[0] = 0;
+	tEntry = 0 + lengthDeltaT;
+	getPosition(temp1, 0);
+
+	while (tEntry < 1.0f)
+	{
+		getPosition(temp2, tEntry);
+		VecSubtract(temp3, temp2, temp1);
+		double l = VecLength(temp3);
+		cumulateL += l;
+		lengthMap[(int)(tEntry / lengthDeltaT)] = cumulateL;
+		//animTcl::OutputMessage("entry = %d length = %f", (int)(tEntry / lengthDeltaT), cumulateL);
+		tEntry += lengthDeltaT;
+		VecCopy(temp1, temp2);
+	}
+
+	// last entry (t is 1)
+	getPosition(temp3, 1);
+	VecSubtract(temp3, temp3, temp2);
+	double l = VecLength(temp3);
+	cumulateL += l;
+	lengthMap[(int)(1 / lengthDeltaT)] = cumulateL;
+	//animTcl::OutputMessage("entry = 1.0 length = %f", cumulateL);
+}
+
+double Hermite::getArcLength(double t)
+{
+	int entry = (int)(t / lengthDeltaT + 0.5);
+	//animTcl::OutputMessage("entry = %d", entry);
+	std::map<int, double>::iterator it = lengthMap.find(entry);
+
+	if (it != lengthMap.end())
+	{
+		return it->second;
+	}
+		
+	return -1.0;
+}
+
+void Hermite::crInitialize()
+{
+	if (controlPoints.size() < 3)
+	{
+		animTcl::OutputMessage("Unable to apply CR-Initialize, less than 3 control points");
+		return;
+	}
+
+	// s0 = 2(y1 - y0) - (y2 - y0)/2
+	Vector temp1;
+	Vector temp2;
+	VecSubtract(temp1, controlPoints[1].point, controlPoints[2].point);
+	VecScale(temp1, 2);
+	VecSubtract(temp2, controlPoints[2].point, controlPoints[0].point);
+	VecScale(temp2, 0.5);
+	VecSubtract(controlPoints[0].tangent, temp1, temp2);
+	segments[0].setStartPoint(controlPoints[0]);
+
+	// si = (yi+1 - yi-1)/2 for i = 1,...,n-2
+	for (int i = 1; i < controlPoints.size() - 1; i++)
+	{
+		VecSubtract(temp1, controlPoints[i + 1].point, controlPoints[i - 1].point);
+		VecScale(temp1, 0.5);
+		VecCopy(controlPoints[i].tangent, temp1);
+		segments[i - 1].setEndPoint(controlPoints[i]);
+		segments[i].setStartPoint(controlPoints[i]);
+	}
+
+	// sn-1 = 2(yn-1 - yn-2) - (yn-1 - yn-3)/2
+	int n = controlPoints.size();
+	VecSubtract(temp1, controlPoints[n - 1].point, controlPoints[n - 2].point);
+	VecScale(temp1, 2);
+	VecSubtract(temp2, controlPoints[n - 1].point, controlPoints[n - 3].point);
+	VecScale(temp2, 0.5);
+	VecSubtract(controlPoints[n - 1].tangent, temp1, temp2);
+	segments[n - 2].setEndPoint(controlPoints[n - 1]);
+
+}
+
+void Hermite::addSegment(Segment segment)
+{
+	segments.push_back(segment);
+}
+
+void Hermite::recomputeSegment(int pointIndex)
+{
+	// not the first point, compute the segment before point 
+	if (pointIndex > 0)
+	{
+		segments[pointIndex - 1].setEndPoint(controlPoints[pointIndex]);
+	}
+
+	// not the last point, compute the segment after point
+	if (pointIndex < controlPoints.size() - 1)
+	{
+		segments[pointIndex].setStartPoint(controlPoints[pointIndex]);
+	}
+
+
+
+}
