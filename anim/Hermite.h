@@ -100,11 +100,19 @@ public:
 
 	void getPosition(Vector result, double t);
 
-	void generateLengthTable();
-
 	double getArcLength(double t);
 
-	void crInitialize();
+	int getNumPoints() const;
+
+	void getControlPoint(Vector p, int index);
+
+	void getControlPointTangent(Vector p, int index);
+
+	void generateLengthTable();
+
+	void applyCR();
+
+	void turnOffCR();
 
 protected:
 

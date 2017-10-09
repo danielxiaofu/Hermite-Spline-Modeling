@@ -15,6 +15,10 @@ public:
 
 	int command(int argc, myCONST_SPEC char **argv);
 
+	void onLeftClick(Vector position);
+
+	void setHermiteObject(Hermite* hermiteP);
+
 protected:
 	Hermite* hermite;
 

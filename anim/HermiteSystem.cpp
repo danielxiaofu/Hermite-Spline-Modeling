@@ -44,9 +44,6 @@ int HermiteSystem::command(int argc, myCONST_SPEC char ** argv)
 		int numPoints;
 		myFile >> fileName >> numPoints;
 
-		hermite = dynamic_cast<Hermite*>(GlobalResourceManager::use()->getObject("Hermite1"));
-		assert(hermite);
-
 		double px, py, pz, sx, sy, sz;
 		int i = 0;
 		while (myFile >> px >> py >> pz >> sx >> sy >> sz && i < numPoints)
@@ -54,6 +51,7 @@ int HermiteSystem::command(int argc, myCONST_SPEC char ** argv)
 			//animTcl::OutputMessage("%f, %f, %f, %f, %f, %f", px, py, pz, sx, sy, sz);
 			hermite->addControlPoint(px, py, pz, sx, sy, sz);
 		}
+		myFile.close();
 		//hermite->crInitialize();
 		glutPostRedisplay();
 		hermite->generateLengthTable();
@@ -140,6 +138,44 @@ int HermiteSystem::command(int argc, myCONST_SPEC char ** argv)
 			
 		}
 	}
+	else if (strcmp(argv[0], "cr") == 0)
+	{
+		
+	}
+	else if (strcmp(argv[0], "export") == 0)
+	{
+		if (argc < 2)
+		{
+			animTcl::OutputMessage("system %s: wrong number of params after export.", m_name);
+			return TCL_ERROR;
+		}
 
+		std::ofstream out(argv[1]);
+		int n = hermite->getNumPoints();
+
+		out << "hermite " << n << "\n";
+		Vector point, tangent;
+		for (int i = 0; i < n; i++)
+		{
+			hermite->getControlPoint(point, i);
+			hermite->getControlPointTangent(tangent, i);
+			out << point[0] << " " << point[1] << " " << point[2] << " " << tangent[0] << " " << tangent[1] << " " << tangent[2] << "\n";
+		}
+		out.close();
+		animTcl::OutputMessage("system %s: export finished!.", m_name);
+	}
 	return 0;
+}
+
+void HermiteSystem::onLeftClick(Vector position)
+{
+	// zero out z value
+	position[2] = 0;
+	hermite->addControlPoint(position[0], position[1], position[2]);
+	glutPostRedisplay();
+}
+
+void HermiteSystem::setHermiteObject(Hermite * hermiteP)
+{
+	hermite = hermiteP;
 }

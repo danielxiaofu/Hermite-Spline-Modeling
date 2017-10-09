@@ -1,5 +1,6 @@
 ////////////////////////////////////////////////////
 // // Template code for  CS 174C
+// // Modified by Yixiao Yang
 ////////////////////////////////////////////////////
 
 #ifdef WIN32
@@ -55,14 +56,21 @@ void myMouse(int button, int state, int x, int y)
 
 	if( button == GLUT_LEFT_BUTTON && state == GLUT_DOWN )
 	{
-		animTcl::OutputMessage(
-			"My mouse received a mouse button press event\n");
+		//animTcl::OutputMessage("My mouse received a mouse button press event\n");
 
 	}
 	if( button == GLUT_LEFT_BUTTON && state == GLUT_UP )
 	{
-		animTcl::OutputMessage(
-			"My mouse received a mouse button release event\n") ;
+		//animTcl::OutputMessage("My mouse received a mouse button release event\n") ;
+		BaseSystem* hermiteBase = GlobalResourceManager::use()->getSystem("hermite");
+		if (hermiteBase)
+		{
+			HermiteSystem* hermite = dynamic_cast<HermiteSystem*>(hermiteBase);
+			Vector pos;
+			pickFromXYPlane(pos, x, y);
+			hermite->onLeftClick(pos);
+		}
+
 	}
 }	// myMouse
 
@@ -81,6 +89,61 @@ void myMotion(int x, int y)
 
 }	// myMotion
 
+void pickFromXYPlane(Vector result, int x, int y)
+{
+	double modelView[16];
+	double projection[16];
+	int viewport[4];
+
+	double x1, y1, z1, x2, y2, z2;
+
+	glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
+	glGetDoublev(GL_PROJECTION_MATRIX, projection);
+	glGetIntegerv(GL_VIEWPORT, viewport);
+
+	y = viewport[3] - y;
+	gluUnProject(x, y, 0, modelView, projection, viewport, &x1, &y1,
+		&z1);
+	gluUnProject(x, y, 1, modelView, projection, viewport, &x2, &y2,
+		&z2);
+
+	double t = z1 / (z1 - z2);
+
+	result[0] = (1 - t) * x1 + t * x2;
+	result[1] = (1 - t) * y1 + t * y2;
+	result[2] = 0;
+
+	double z = (1 - t) * z1 + t * z2;
+}
+
+void resetHermite()
+{
+	GlobalResourceManager::use()->clearAll();
+	animTcl::OutputMessage("Objects cleaned!");
+	glutPostRedisplay();
+
+	bool success;
+
+	// register a hermite system
+	HermiteSystem* hermiteSystem1 = new HermiteSystem("hermite");
+	success = GlobalResourceManager::use()->addSystem(hermiteSystem1, true);
+	assert(success);
+	animTcl::OutputMessage("Hermite system created!");
+
+	// register a hermite simulator
+	HermiteSimulator* hermiteSimulator = new HermiteSimulator("HermiteSimulator", hermiteSystem1);
+	success = GlobalResourceManager::use()->addSimulator(hermiteSimulator, true);
+	assert(success);
+	animTcl::OutputMessage("Hermite simulator created!");
+
+	// register a hermite object
+	Hermite* hermite1 = new Hermite("Hermite1");
+	success = GlobalResourceManager::use()->addObject(hermite1, true);
+	assert(success);
+	animTcl::OutputMessage("Hermite object created!");
+
+	hermiteSystem1->setHermiteObject(hermite1);
+}
 
 void MakeScene(void)
 {
@@ -155,7 +218,13 @@ void myIdleCB(void)
 
 void myKey(unsigned char key, int x, int y)
 {
-	 animTcl::OutputMessage("My key callback received a key press event\n");
+	 //animTcl::OutputMessage("My key callback received a key press event\n");
+	switch (key) {
+	case 'r':
+		resetHermite();
+		break;
+	}
+
 	return;
 
 }	// myKey
@@ -169,29 +238,7 @@ static int testGlobalCommand(ClientData clientData, Tcl_Interp *interp, int argc
 
 static int partOneGlobalCommand(ClientData clientData, Tcl_Interp *interp, int argc, myCONST_SPEC char **argv)
 {
-	GlobalResourceManager::use()->clearAll();
-	animTcl::OutputMessage("Objects cleaned!");
-	glutPostRedisplay();
-
-	bool success;
-
-	// register a hermite system
-	HermiteSystem* hermiteSystem1 = new HermiteSystem("hermite");
-	success = GlobalResourceManager::use()->addSystem(hermiteSystem1, true);
-	assert(success);
-	animTcl::OutputMessage("Hermite system added!");
-
-	// register a hermite simulator
-	HermiteSimulator* hermiteSimulator = new HermiteSimulator("HermiteSimulator", hermiteSystem1);
-	success = GlobalResourceManager::use()->addSimulator(hermiteSimulator, true);
-	assert(success);
-	animTcl::OutputMessage("Hermite simulator added!");
-
-	// register a hermite object
-	Hermite* hermite1 = new Hermite("Hermite1");
-	success = GlobalResourceManager::use()->addObject(hermite1, true);
-	assert(success);
-	animTcl::OutputMessage("Hermite object added!");
+	resetHermite();
 
 	return TCL_OK;
 }

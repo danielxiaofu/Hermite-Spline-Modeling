@@ -30,6 +30,11 @@ void myIdleCB(void) ;
 // Commands you specify here will be recognized by the interpreter
 void mySetScriptCommands(Tcl_Interp *interp, int argc, char **argv) ;
 
+// given xy coordinate on screen, return corresponding 3D position
+void pickFromXYPlane(Vector result, int x, int y);
+
+void resetHermite();
+
 // Variables you specify here will be recognised by the tcl interpreter
 extern SETVAR myScriptVariables[] ;
 
