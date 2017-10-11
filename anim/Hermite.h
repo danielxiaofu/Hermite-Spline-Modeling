@@ -76,7 +76,7 @@ class Hermite : public BaseObject
 {
 
 protected:
-	const int numOfSamples = 30; // number of sample lines to describe a curve segment
+	const int numOfSamples = 30; // number of sample lines to describe a curve segment, used in rendering
 	const float lengthDeltaT = 0.05;
 
 	std::vector<ControlPoint> controlPoints;
@@ -86,21 +86,27 @@ protected:
 public:
 	Hermite( const std::string& name );
 
+	void display(GLenum mode = GL_RENDER);
+
+	// modification function
+
 	void addControlPoint(ControlPoint controlPoint);
 
 	void addControlPoint(double px, double py, double pz, double sx, double sy, double sz);
 
 	void addControlPoint(double px, double py, double pz);
 
-	void display(GLenum mode = GL_RENDER);
-
 	bool setPoint(int index, double x, double y, double z);
 
 	bool setTangent(int index, double x, double y, double z);
 
+	// end of modification function
+
+	// query function
+
 	void getPosition(Vector result, double t);
 
-	double getArcLength(double t);
+	void getTangent(Vector result, double t);
 
 	int getNumPoints() const;
 
@@ -108,11 +114,24 @@ public:
 
 	void getControlPointTangent(Vector p, int index);
 
+	double getArcLength(double t);
+
+	double getPointFromLength(Vector position, Vector tangent, double arcLength);
+
+	// end of query function
+
+	// other function
+
 	void generateLengthTable();
 
 	void applyCR();
 
 	void turnOffCR();
+
+	// construct a uniform version of this curve, uniform means linear relationship between arclength and t
+	void generateUniformCurve(Hermite* result);
+
+	// end of other function
 
 protected:
 
@@ -120,4 +139,7 @@ protected:
 
 	// given index of a controlpoint, recompute the segments that connect that point
 	void recomputeSegment(int pointIndex);
+
+	// perform binary search on length table, return t value that related to targetLength
+	double binarySearchLength(double startT, double endT, int startIndex, int endIndex, double targetLength);
 };
