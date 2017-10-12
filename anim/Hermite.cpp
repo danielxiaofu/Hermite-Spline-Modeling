@@ -15,6 +15,7 @@ void Segment::setStartPoint(ControlPoint startPoint)
 	VecCopy(y0, startPoint.point);
 	VecCopy(s0, startPoint.tangent);
 	computeCurve();
+	generateLengthTable();
 }
 
 void Segment::setEndPoint(ControlPoint endPoint)
@@ -22,6 +23,7 @@ void Segment::setEndPoint(ControlPoint endPoint)
 	VecCopy(y1, endPoint.point);
 	VecCopy(s1, endPoint.tangent);
 	computeCurve();
+	generateLengthTable();
 }
 
 void Segment::computeCurve()
@@ -42,6 +44,42 @@ void Segment::computeCurve()
 	VecScale(temp2, 2);
 	VecSubtract(temp, temp, temp2);
 	VecSubtract(b, temp, s1);
+}
+
+double Segment::getPointFromLength(double arcLength)
+{
+	if (arcLength >= getArcLength(1))
+		return 1.0;
+	else if (fabs(arcLength) <= DBL_EPSILON)
+	{
+		return 0.0;
+	}
+
+	double t = binarySearchLength(0.0, 1.0, arcLength);
+
+	return t;
+}
+
+double Segment::binarySearchLength(double startT, double endT, double targetLength)
+{
+	// get the arc length and table index at middle point
+	double middleT = (startT + endT) / 2;
+
+	//animTcl::OutputMessage("entry = %d", entry);
+
+	double middleLength = getArcLength(middleT);
+	double finalT = 0.0;
+
+	if (fabs(middleLength - targetLength) < 0.01)
+		return middleT;
+
+	// otherwise do recursive root finding
+	if (targetLength <= middleLength)
+		finalT = binarySearchLength(startT, middleT, targetLength);
+	else
+		finalT = binarySearchLength(middleT, endT, targetLength);
+
+	return finalT;
 }
 
 void Segment::getPosition(Vector result, double t)
@@ -82,12 +120,60 @@ void Segment::getTangent(Vector result, double t)
 		VecCopy(result, s1);
 }
 
+void Segment::generateLengthTable()
+{
+	lengthMap.clear();
+
+	Vector temp1, temp2, temp3;
+
+	double tEntry = 0;
+	double cumulateL = 0;
+
+	lengthMap[0] = 0;
+	tEntry += lengthDeltaT;
+	getPosition(temp1, 0);
+
+	while (tEntry < 1.0)
+	{
+		getPosition(temp2, tEntry);
+		VecSubtract(temp3, temp2, temp1);
+		double l = VecLength(temp3);
+		cumulateL += l;
+		lengthMap[(int)(tEntry / lengthDeltaT)] = cumulateL;
+		tEntry += lengthDeltaT;
+		VecCopy(temp1, temp2);
+	}
+
+	getPosition(temp3, 1);
+	VecSubtract(temp3, temp3, temp2);
+	double l = VecLength(temp3);
+	cumulateL += l;
+	lengthMap[(int)(1 / lengthDeltaT)] = cumulateL;
+
+}
+
+double Segment::getArcLength(double t)
+{
+	int entry = (int)(t / lengthDeltaT);
+	std::map<int, double>::iterator it = lengthMap.find(entry);
+
+	if (it != lengthMap.end())
+	{
+		double result = it->second + (t - entry * lengthDeltaT) / lengthDeltaT * (std::next(it)->second - it->second);
+		return result;
+	}
+
+	return -1.0;
+
+	return 0.0;
+}
+
 
 
 Hermite::Hermite(const std::string& name) :
 	BaseObject(name)
 {
-	
+	setVector(color, 1, 1, 1);
 }
 
 void Hermite::addControlPoint(ControlPoint controlPoint)
@@ -162,6 +248,9 @@ void Hermite::addControlPoint(double px, double py, double pz)
 
 void Hermite::display(GLenum mode)
 {
+	if (!visible)
+		return;
+
 	for (Segment segment : segments)
 	{
 		Vector p1, p2;
@@ -172,6 +261,7 @@ void Hermite::display(GLenum mode)
 			VecCopy(p1, p2);
 			segment.getPosition(p2, i / (double)(numOfSamples - 1));
 			glLineWidth(5);
+			glColor3d(color[0], color[1], color[2]);
 			glBegin(GL_LINES);
 			glVertex3d(p1[0], p1[1], p1[2]);
 			glVertex3d(p2[0], p2[1], p2[2]);
@@ -179,7 +269,8 @@ void Hermite::display(GLenum mode)
 		}
 	}
 
-	for (ControlPoint controlPoint : controlPoints)
+	// draw controlpoints
+	/*for (ControlPoint controlPoint : controlPoints)
 	{
 		Vector p;
 		VecCopy(p, controlPoint.point);
@@ -187,7 +278,14 @@ void Hermite::display(GLenum mode)
 		glBegin(GL_POINTS);
 		glVertex3d(p[0], p[1], p[2]);
 		glEnd();
-	}
+	}*/
+}
+
+void Hermite::reset(double time)
+{
+	controlPoints.clear();
+	segments.clear();
+	lengthMap.clear();
 }
 
 bool Hermite::setPoint(int index, double x, double y, double z)
@@ -201,7 +299,7 @@ bool Hermite::setPoint(int index, double x, double y, double z)
 
 	VecCopy(controlPoints[index].point, newPoint);
 	recomputeSegment(index);
-	generateLengthTable();
+	//generateLengthTable();
 	return true;
 }
 
@@ -212,12 +310,12 @@ bool Hermite::setTangent(int index, double x, double y, double z)
 	Vector newTangent;
 	newTangent[0] = x;
 	newTangent[1] = y;
-	newTangent[2] = z;
+newTangent[2] = z;
 
-	VecCopy(controlPoints[index].tangent, newTangent);
-	recomputeSegment(index);
-	generateLengthTable();
-	return true;
+VecCopy(controlPoints[index].tangent, newTangent);
+recomputeSegment(index);
+//generateLengthTable();
+return true;
 }
 
 void Hermite::getPosition(Vector result, double t)
@@ -227,19 +325,22 @@ void Hermite::getPosition(Vector result, double t)
 		return;
 	}
 
-	if (t <= 0)
-		VecCopy(result, segments[0].y0);
-	else if (t > 0 && t < 1)
+	if (t >= 0 && t < 1)
 	{
 		double segmentLength = 1.0f / segments.size();
-		int segmentIndex = (int)(t * segments.size());
-		double localT = abs(remainder(t, segmentLength));
+		int segmentIndex = (int)(t * (segments.size()));
+		double localT = (t - (int)(t / segmentLength) * segmentLength) / segmentLength;
 		segments[segmentIndex].getPosition(result, localT);
-		//animTcl::OutputMessage("local T = %f", localT);
 	}
 	else
+	{
 		VecCopy(result, segments[segments.size() - 1].y1);
+	}
 	
+
+
+	//animTcl::OutputMessage("segment index = %d, local t = %f", segmentIndex, localT);
+
 }
 
 void Hermite::getTangent(Vector result, double t)
@@ -265,70 +366,81 @@ void Hermite::getTangent(Vector result, double t)
 
 void Hermite::generateLengthTable()
 {
-	Vector temp1, temp2, temp3;
 	double tEntry = 0;
-	double cumulateL = 0;
 
 	// first entry (t is 0);
 	lengthMap[0] = 0;
 	tEntry = 0 + lengthDeltaT;
-	getPosition(temp1, 0);
 
+	double segmentLength = 1.0f / segments.size();
 	while (tEntry < 1.0f)
 	{
-		getPosition(temp2, tEntry);
-		VecSubtract(temp3, temp2, temp1);
-		double l = VecLength(temp3);
-		cumulateL += l;
-		lengthMap[(int)(tEntry / lengthDeltaT)] = cumulateL;
-		//animTcl::OutputMessage("entry = %d length = %f", (int)(tEntry / lengthDeltaT), cumulateL);
+		int segmentIndex = (int)(tEntry * (segments.size()));
+		double localT = (tEntry - (int)(tEntry / segmentLength) * segmentLength) / segmentLength;
+		double length = getGlobalLength(segmentIndex) + segments[segmentIndex].getArcLength(localT);
+		lengthMap[(int)(tEntry / lengthDeltaT)] = length;
+		animTcl::OutputMessage("entry = %d t = %f length = %f", (int)(tEntry / lengthDeltaT), tEntry, length);
 		tEntry += lengthDeltaT;
-		VecCopy(temp1, temp2);
 	}
 
 	// last entry (t is 1)
-	getPosition(temp3, 1);
-	VecSubtract(temp3, temp3, temp2);
-	double l = VecLength(temp3);
-	cumulateL += l;
-	lengthMap[(int)(1 / lengthDeltaT)] = cumulateL;
-	//animTcl::OutputMessage("entry = 1.0 length = %f", cumulateL);
+	double last = getGlobalLength(segments.size() - 1) + segments[segments.size() - 1].getArcLength(1.0);
+	lengthMap[(int)(1 / lengthDeltaT)] = last;
+	animTcl::OutputMessage("entry = 1 t = 1 length = %f", last);
 }
 
 double Hermite::getArcLength(double t)
 {
-	int entry = (int)(t / lengthDeltaT + 0.5);
+	//int entry = (int)(t / lengthDeltaT + 0.5);
 	//animTcl::OutputMessage("entry = %d", entry);
+	int entry = (int)(t / lengthDeltaT);
 	std::map<int, double>::iterator it = lengthMap.find(entry);
 
-	if (it != lengthMap.end())
+	if (it != lengthMap.end() && std::next(it) != lengthMap.end())
 	{
-		return it->second;
+		double result = it->second + (t - entry * lengthDeltaT) / lengthDeltaT * (std::next(it)->second - it->second);
+		return result;
 	}
-		
+
 	return -1.0;
 }
 
-double Hermite::getPointFromLength(Vector position, Vector tangent, double arcLength)
+void Hermite::getPointFromLength(Vector position, Vector tangent, double arcLength)
 {
+	if (controlPoints.size() == 0)
+	{
+		zeroVector(position);
+		zeroVector(tangent);
+		return;
+	}
+
 	if (arcLength >= getArcLength(1))
 	{
-		controlPoints[controlPoints.size() - 1].getPoint(position);
-		controlPoints[controlPoints.size() - 1].getTangent(tangent);
-		return 1.0;
+		segments[segments.size() - 1].getPosition(position, 1.0);
+		segments[segments.size() - 1].getTangent(tangent, 1.0);
+		return;
 	}
-	else if (fabs(arcLength) <= DBL_EPSILON)
+
+	// go through the global length of every segment in order to find which segment the arcLength lands on
+	double globalLength = 0;
+	int i;
+	int index = segments.size() - 1;
+	bool stop = false;
+	for (i = 0; !stop && i <= segments.size(); i++)
 	{
-		controlPoints[0].getPoint(position);
-		controlPoints[0].getTangent(tangent);
-		return 0.0;
+		double nextLength = getGlobalLength(i);
+		if (nextLength > arcLength)
+		{
+			stop = true;
+			index = i - 1;
+		}
+		else
+			globalLength = nextLength;
 	}
-
-	double t = binarySearchLength(0.0, 1.0, 0, (int)(1 / lengthDeltaT), arcLength);
-	getPosition(position, t);
-	getTangent(tangent, t);
-
-	return t;
+	double localLength = arcLength - globalLength;
+	double localT = segments[index].getPointFromLength(localLength);
+	segments[index].getPosition(position, localT);
+	segments[index].getTangent(tangent, localT);
 }
 
 int Hermite::getNumPoints() const
@@ -400,96 +512,83 @@ void Hermite::turnOffCR()
 	}
 }
 
-void Hermite::generateUniformCurve(Hermite * result)
-{
-	// clear all data of result curve
-	result->controlPoints.empty();
-	result->segments.empty();
-	result->lengthMap.empty();
-
-	// compute delta length for each uniform segment
-	double length = getArcLength(1);
-	double deltaLength = length / segments.size();
-
-	// create control points for new curve
-	double cumulateLength = 0;
-	Vector point, tangent;
-	for (int i = 0; i < segments.size() - 1; i++)
-	{
-		getPointFromLength(point, tangent, cumulateLength);
-		result->addControlPoint(ControlPoint(point, tangent));
-		cumulateLength += deltaLength;
-	}
-	// add the last point
-	getPointFromLength(point, tangent, cumulateLength);
-	result->addControlPoint(ControlPoint(point, tangent));
-	result->generateLengthTable();
-}
+//void Hermite::generateUniformCurve(Hermite * result)
+//{
+//	// clear all data of result curve
+//	result->controlPoints.clear();
+//	result->segments.clear();
+//	result->lengthMap.clear();
+//
+//	// compute delta length for each uniform segment
+//	double length = getArcLength(1);
+//	double deltaLength = length / segments.size();
+//
+//	// create control points for new curve
+//	double cumulateLength = 0;
+//	Vector point, tangent;
+//	for (int i = 0; i < segments.size() - 1; i++)
+//	{
+//		double t = getPointFromLength(point, tangent, cumulateLength);
+//		result->addControlPoint(ControlPoint(point, tangent));
+//		cumulateLength += deltaLength;
+//		animTcl::OutputMessage("length = %f", cumulateLength);
+//	}
+//	// add the last point
+//	getPointFromLength(point, tangent, cumulateLength);
+//	result->addControlPoint(ControlPoint(point, tangent));
+//	result->generateLengthTable();
+//}
 
 void Hermite::addSegment(Segment segment)
 {
 	segments.push_back(segment);
-	generateLengthTable();
+	//generateLengthTable();
+}
+
+double Hermite::getGlobalLength(int segmentIndex)
+{
+	if (segmentIndex < 0)
+		return 0.0;
+	else if (segmentIndex >= segments.size())
+		segmentIndex = segments.size();
+
+	double globalLength = 0;
+	for (int i = segmentIndex - 1; i >= 0; i--)
+	{
+		globalLength += segments[i].getArcLength(1.0);
+	}
+
+	return globalLength;
 }
 
 void Hermite::recomputeSegment(int pointIndex)
 {
 	// not the first point, compute the segment before point 
 	if (pointIndex > 0)
-	{
 		segments[pointIndex - 1].setEndPoint(controlPoints[pointIndex]);
-	}
-
 	// not the last point, compute the segment after point
 	if (pointIndex < controlPoints.size() - 1)
-	{
 		segments[pointIndex].setStartPoint(controlPoints[pointIndex]);
-	}
-
-
-
 }
 
-double Hermite::binarySearchLength(double startT, double endT, int startIndex, int endIndex, double targetLength)
+double Hermite::binarySearchLength(double startT, double endT, double targetLength)
 {
 	// get the arc length and table index at middle point
 	double middleT = (startT + endT) / 2;
-	int middleIndex = (int)(middleT / lengthDeltaT + 0.5);
+
 	//animTcl::OutputMessage("entry = %d", entry);
-	std::map<int, double>::iterator it = lengthMap.find(middleIndex);
-	double middleLength = it->second;
 
-	// if middleIndex is equal to start or end index, the minimum interval is found
-	if (middleIndex == startIndex || middleIndex == endIndex)
-	{
-		int i1, i2;
-		double t1, t2, length1, length2;	
-		if (middleIndex == startIndex)
-		{
-			i1 = middleIndex;
-			i2 = middleIndex + 1;
-		}
-		else
-		{
-			i1 = middleIndex - 1;
-			i2 = middleIndex;
-		}
-		t1 = i1 * lengthDeltaT;
-		t2 = i2 * lengthDeltaT;
-		std::map<int, double>::iterator it1 = lengthMap.find(i1);
-		std::map<int, double>::iterator it2 = lengthMap.find(i2);
-		length1 = it1->second;
-		length2 = it2->second;
-		
-		double f = (targetLength - length1) / (length2 - length1);
-		return t1 + f * (t2 - t1);
-	}
+	double middleLength = getArcLength(middleT);
+	double finalT = 0.0;
 
-	// otherwise do recursive check
+	if (fabs(middleLength - targetLength) < 0.01)
+		return middleT;
+
+	// otherwise do recursive root finding
 	if (targetLength <= middleLength)
-		binarySearchLength(startT, middleT, startIndex, middleIndex, targetLength);
+		finalT = binarySearchLength(startT, middleT, targetLength);
 	else
-		binarySearchLength(middleT, endT, middleIndex, endIndex, targetLength);
+		finalT = binarySearchLength(middleT, endT, targetLength);
 
-	return 0.0;
+	return finalT;
 }

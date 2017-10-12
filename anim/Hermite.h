@@ -61,15 +61,28 @@ struct Segment
 
 	Segment(ControlPoint startPoint, ControlPoint endPoint);
 
+	const float lengthDeltaT = 0.05;
+
+	std::map<int, double> lengthMap;
+
 	void setStartPoint(ControlPoint startPoint);
 
 	void setEndPoint(ControlPoint endPoint);
 
-	void computeCurve();
-
 	void getPosition(Vector result, double t);
 
 	void getTangent(Vector result, double t);
+
+	void generateLengthTable();
+
+	double getArcLength(double t);
+
+	void computeCurve();
+
+	double getPointFromLength(double targetLength);
+
+	// perform binary search on length table, return t value that related to targetLength
+	double binarySearchLength(double startT, double endT, double targetLength);
 };
 
 class Hermite : public BaseObject
@@ -86,7 +99,13 @@ protected:
 public:
 	Hermite( const std::string& name );
 
+	bool visible = true;
+
+	Vector color;
+
 	void display(GLenum mode = GL_RENDER);
+
+	void reset(double time);
 
 	// modification function
 
@@ -116,7 +135,7 @@ public:
 
 	double getArcLength(double t);
 
-	double getPointFromLength(Vector position, Vector tangent, double arcLength);
+	void getPointFromLength(Vector position, Vector tangent, double arcLength);
 
 	// end of query function
 
@@ -129,7 +148,7 @@ public:
 	void turnOffCR();
 
 	// construct a uniform version of this curve, uniform means linear relationship between arclength and t
-	void generateUniformCurve(Hermite* result);
+	//void generateUniformCurve(Hermite* result);
 
 	// end of other function
 
@@ -137,9 +156,12 @@ protected:
 
 	void addSegment(Segment segment);
 
+	// given index of segment, return sum of length of all segments before this segment
+	double getGlobalLength(int segmentIndex);
+
 	// given index of a controlpoint, recompute the segments that connect that point
 	void recomputeSegment(int pointIndex);
 
 	// perform binary search on length table, return t value that related to targetLength
-	double binarySearchLength(double startT, double endT, int startIndex, int endIndex, double targetLength);
+	double binarySearchLength(double startT, double endT, double targetLength);
 };

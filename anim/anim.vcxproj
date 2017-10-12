@@ -107,6 +107,7 @@
     <ClCompile Include="SampleGravitySimulator.cpp" />
     <ClCompile Include="SampleParticle.cpp" />
     <ClCompile Include="BaseSystem.cpp" />
+    <ClCompile Include="TankPathSimulator.cpp" />
     <ClCompile Include="TankPathSystem.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -123,6 +124,7 @@
     <ClInclude Include="ResourceManager.h" />
     <ClInclude Include="SampleGravitySimulator.h" />
     <ClInclude Include="SampleParticle.h" />
+    <ClInclude Include="TankPathSimulator.h" />
     <ClInclude Include="TankPathSystem.h" />
   </ItemGroup>
   <ItemGroup>

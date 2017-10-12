@@ -26,6 +26,8 @@
 #include "SampleGravitySimulator.h"
 #include "HermiteSystem.h"
 #include "HermiteSimulator.h"
+#include "TankPathSystem.h"
+#include "TankPathSimulator.h"
 #include <util/jama/tnt_stopwatch.h>
 #include <util/jama/jama_lu.h>
 
@@ -116,35 +118,6 @@ void pickFromXYPlane(Vector result, int x, int y)
 	double z = (1 - t) * z1 + t * z2;
 }
 
-void resetHermite()
-{
-	GlobalResourceManager::use()->clearAll();
-	animTcl::OutputMessage("Objects cleaned!");
-	glutPostRedisplay();
-
-	bool success;
-
-	// register a hermite system
-	HermiteSystem* hermiteSystem1 = new HermiteSystem("hermite");
-	success = GlobalResourceManager::use()->addSystem(hermiteSystem1, true);
-	assert(success);
-	animTcl::OutputMessage("Hermite system created!");
-
-	// register a hermite simulator
-	HermiteSimulator* hermiteSimulator = new HermiteSimulator("HermiteSimulator", hermiteSystem1);
-	success = GlobalResourceManager::use()->addSimulator(hermiteSimulator, true);
-	assert(success);
-	animTcl::OutputMessage("Hermite simulator created!");
-
-	// register a hermite object
-	Hermite* hermite1 = new Hermite("Hermite1");
-	success = GlobalResourceManager::use()->addObject(hermite1, true);
-	assert(success);
-	animTcl::OutputMessage("Hermite object created!");
-
-	hermiteSystem1->setHermiteObject(hermite1);
-}
-
 void MakeScene(void)
 {
 
@@ -218,12 +191,7 @@ void myIdleCB(void)
 
 void myKey(unsigned char key, int x, int y)
 {
-	 //animTcl::OutputMessage("My key callback received a key press event\n");
-	switch (key) {
-	case 'r':
-		resetHermite();
-		break;
-	}
+	animTcl::OutputMessage("My key callback received a key press event\n");
 
 	return;
 
@@ -238,7 +206,70 @@ static int testGlobalCommand(ClientData clientData, Tcl_Interp *interp, int argc
 
 static int partOneGlobalCommand(ClientData clientData, Tcl_Interp *interp, int argc, myCONST_SPEC char **argv)
 {
-	resetHermite();
+	GlobalResourceManager::use()->clearAll();
+	animTcl::OutputMessage("Objects cleaned!");
+	glutPostRedisplay();
+
+	bool success;
+
+	// register a hermite system
+	HermiteSystem* hermiteSystem1 = new HermiteSystem("hermite");
+	success = GlobalResourceManager::use()->addSystem(hermiteSystem1, true);
+	assert(success);
+	animTcl::OutputMessage("Hermite system created!");
+
+	// register a hermite simulator
+	HermiteSimulator* hermiteSimulator = new HermiteSimulator("HermiteSimulator", hermiteSystem1);
+	success = GlobalResourceManager::use()->addSimulator(hermiteSimulator, true);
+	assert(success);
+	animTcl::OutputMessage("Hermite simulator created!");
+
+	// register a hermite curve
+	Hermite* hermite1 = new Hermite("Hermite1");
+	success = GlobalResourceManager::use()->addObject(hermite1, true);
+	assert(success);
+	animTcl::OutputMessage("Hermite curve created!");
+
+	hermiteSystem1->setHermiteObject(hermite1);
+
+	return TCL_OK;
+}
+
+static int partTwoGlobalCommand(ClientData clientData, Tcl_Interp *interp, int argc, myCONST_SPEC char **argv)
+{
+	GlobalResourceManager::use()->clearAll();
+	animTcl::OutputMessage("Objects cleaned!");
+	glutPostRedisplay();
+
+	bool success;
+
+	// register a tankpath system
+	TankPathSystem* tankPathSystem = new TankPathSystem("tankpath");
+	success = GlobalResourceManager::use()->addSystem(tankPathSystem, true);
+	assert(success);
+	animTcl::OutputMessage("Tankpath system created!");
+
+	// register a tankpath simulator
+	TankPathSimulator* tankPathSimulator = new TankPathSimulator("tankPathSimulator", tankPathSystem);
+	success = GlobalResourceManager::use()->addSimulator(tankPathSimulator, true);
+	assert(success);
+	animTcl::OutputMessage("Tankpath simulator created!");
+
+	// register a hermite curve for path
+	Hermite* tankPathHermite = new Hermite("tankpathHermite");
+	success = GlobalResourceManager::use()->addObject(tankPathHermite, true);
+	assert(success);
+	animTcl::OutputMessage("Tank path curve created!");
+
+	// register a hermite curve for uniformed path
+	Hermite* tankPathUniform = new Hermite("tankpathUniform");
+	success = GlobalResourceManager::use()->addObject(tankPathUniform, true);
+	assert(success);
+	animTcl::OutputMessage("Tank path uniform curve created!");
+
+	tankPathSystem->setPath(tankPathHermite);
+	tankPathSystem->setUniformedPath(tankPathUniform);
+	tankPathSystem->loadModel();
 
 	return TCL_OK;
 }
@@ -253,5 +284,7 @@ void mySetScriptCommands(Tcl_Interp *interp)
 					  (Tcl_CmdDeleteProc *)	NULL);
 	Tcl_CreateCommand(interp, "part1", partOneGlobalCommand, (ClientData)NULL,
 			(Tcl_CmdDeleteProc *)NULL);
+	Tcl_CreateCommand(interp, "part2", partTwoGlobalCommand, (ClientData)NULL,
+		(Tcl_CmdDeleteProc *)NULL);
 
 }	// mySetScriptCommands
