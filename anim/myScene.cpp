@@ -28,6 +28,8 @@
 #include "HermiteSimulator.h"
 #include "TankPathSystem.h"
 #include "TankPathSimulator.h"
+#include "MissileSystem.h"
+#include "MissileSimulator.h"
 #include <util/jama/tnt_stopwatch.h>
 #include <util/jama/jama_lu.h>
 
@@ -270,6 +272,30 @@ static int partTwoGlobalCommand(ClientData clientData, Tcl_Interp *interp, int a
 	tankPathSystem->setPath(tankPathHermite);
 	tankPathSystem->setUniformedPath(tankPathUniform);
 	tankPathSystem->loadModel();
+
+	// register a missile system
+	MissileSystem* missileSystem = new MissileSystem("missile");
+	success = GlobalResourceManager::use()->addSystem(missileSystem, true);
+	assert(success);
+	animTcl::OutputMessage("Missile system created!");
+
+	// register a missile simulator
+	MissileSimulator* missileSimulator = new MissileSimulator("missileSimulator", missileSystem);
+	success = GlobalResourceManager::use()->addSimulator(missileSimulator, true);
+	assert(success);
+	animTcl::OutputMessage("Missile simulator created!");
+
+	// register a hermite curve for missile path
+	Hermite* missileHermite = new Hermite("missileHermite");
+	success = GlobalResourceManager::use()->addObject(missileHermite, true);
+	assert(success);
+	animTcl::OutputMessage("Missile path created!");
+
+	missileSystem->setPath(missileHermite);
+	missileSystem->initializePath();
+	missileSystem->loadModel();
+	missileSimulator->setTargetTank(tankPathSimulator);
+	glutPostRedisplay();
 
 	return TCL_OK;
 }

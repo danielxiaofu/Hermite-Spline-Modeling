@@ -102,6 +102,8 @@
     <ClCompile Include="Hermite.cpp" />
     <ClCompile Include="HermiteSimulator.cpp" />
     <ClCompile Include="HermiteSystem.cpp" />
+    <ClCompile Include="MissileSimulator.cpp" />
+    <ClCompile Include="MissileSystem.cpp" />
     <ClCompile Include="myScene.cpp" />
     <ClCompile Include="ResourceManager.cpp" />
     <ClCompile Include="SampleGravitySimulator.cpp" />
@@ -120,6 +122,8 @@
     <ClInclude Include="Hermite.h" />
     <ClInclude Include="HermiteSimulator.h" />
     <ClInclude Include="HermiteSystem.h" />
+    <ClInclude Include="MissileSimulator.h" />
+    <ClInclude Include="MissileSystem.h" />
     <ClInclude Include="myScene.h" />
     <ClInclude Include="ResourceManager.h" />
     <ClInclude Include="SampleGravitySimulator.h" />

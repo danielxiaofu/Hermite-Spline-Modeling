@@ -39,6 +39,7 @@ int HermiteSystem::command(int argc, myCONST_SPEC char ** argv)
 			animTcl::OutputMessage("system %s: unable to open file", m_name);
 			return TCL_ERROR;
 		}
+		hermite->reset(0.0);
 
 		std::string fileName;
 		int numPoints;

@@ -56,6 +56,12 @@
     <ClCompile Include="TankPathSimulator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MissileSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MissileSimulator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BaseSystem.h">
@@ -101,6 +107,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="TankPathSimulator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MissileSystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MissileSimulator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

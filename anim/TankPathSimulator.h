@@ -2,6 +2,8 @@
 #include "BaseSimulator.h"
 #include "BaseSystem.h"
 
+const double DEFAULT_ACC = 0.03;
+
 class TankPathSimulator :
 	public BaseSimulator
 {
@@ -10,11 +12,15 @@ public:
 
 	int step(double time);
 	int init(double time);
+	void reset(double time);
+
+	void getTankPosition(Vector tankPosition, Vector tankTangent);
 
 protected:
 
 	BaseSystem* m_object;
+	Vector position, tangent;
 
-	double lastTimeStamp = 0.0f;
+	double vel, acc, lastTimeStamp;
 };
 

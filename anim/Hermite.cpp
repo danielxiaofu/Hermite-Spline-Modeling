@@ -355,8 +355,8 @@ void Hermite::getTangent(Vector result, double t)
 	else if (t > 0 && t < 1)
 	{
 		double segmentLength = 1.0f / segments.size();
-		int segmentIndex = (int)(t * segments.size());
-		double localT = abs(remainder(t, segmentLength));
+		int segmentIndex = (int)(t * (segments.size()));
+		double localT = (t - (int)(t / segmentLength) * segmentLength) / segmentLength;
 		segments[segmentIndex].getTangent(result, localT);
 		//animTcl::OutputMessage("local T = %f", localT);
 	}
@@ -379,14 +379,14 @@ void Hermite::generateLengthTable()
 		double localT = (tEntry - (int)(tEntry / segmentLength) * segmentLength) / segmentLength;
 		double length = getGlobalLength(segmentIndex) + segments[segmentIndex].getArcLength(localT);
 		lengthMap[(int)(tEntry / lengthDeltaT)] = length;
-		animTcl::OutputMessage("entry = %d t = %f length = %f", (int)(tEntry / lengthDeltaT), tEntry, length);
+		//animTcl::OutputMessage("entry = %d t = %f length = %f", (int)(tEntry / lengthDeltaT), tEntry, length);
 		tEntry += lengthDeltaT;
 	}
 
 	// last entry (t is 1)
 	double last = getGlobalLength(segments.size() - 1) + segments[segments.size() - 1].getArcLength(1.0);
 	lengthMap[(int)(1 / lengthDeltaT)] = last;
-	animTcl::OutputMessage("entry = 1 t = 1 length = %f", last);
+	//animTcl::OutputMessage("entry = 1 t = 1 length = %f", last);
 }
 
 double Hermite::getArcLength(double t)
@@ -410,7 +410,7 @@ void Hermite::getPointFromLength(Vector position, Vector tangent, double arcLeng
 	if (controlPoints.size() == 0)
 	{
 		zeroVector(position);
-		zeroVector(tangent);
+		setVector(tangent, 1.0, 0.0, 0.0);
 		return;
 	}
 
@@ -418,6 +418,13 @@ void Hermite::getPointFromLength(Vector position, Vector tangent, double arcLeng
 	{
 		segments[segments.size() - 1].getPosition(position, 1.0);
 		segments[segments.size() - 1].getTangent(tangent, 1.0);
+		return;
+	}
+
+	if (arcLength < DBL_EPSILON)
+	{
+		segments[0].getPosition(position, 0.0);
+		segments[0].getTangent(tangent, 0.0);
 		return;
 	}
 
@@ -429,7 +436,7 @@ void Hermite::getPointFromLength(Vector position, Vector tangent, double arcLeng
 	for (i = 0; !stop && i <= segments.size(); i++)
 	{
 		double nextLength = getGlobalLength(i);
-		if (nextLength > arcLength)
+		if (nextLength - arcLength > DBL_EPSILON)
 		{
 			stop = true;
 			index = i - 1;

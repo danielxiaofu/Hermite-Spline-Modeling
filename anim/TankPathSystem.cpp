@@ -8,17 +8,29 @@ TankPathSystem::TankPathSystem(const std::string & name) :
 	BaseSystem(name)
 {
 	zeroVector(m_pos);
+	zeroVector(m_axis);
+	arcLength = 0.0;
+	totalLength = 0.0;
+	data[0] = arcLength;
+	data[1] = totalLength;
+
 }
 
 void TankPathSystem::getState(double * p)
 {
-	p[0] = arcLength;
+	updateData();
+	for (int i = 0; i < 8; i++)
+	{
+		p[i] = data[i];
+	}
 }
 
 void TankPathSystem::setState(double * p)
 {
-	arcLength = p[0];
-
+	for (int i = 0; i < 8; i++)
+	{
+		data[i] = p[i];
+	}
 }
 
 int TankPathSystem::command(int argc, myCONST_SPEC char ** argv)
@@ -43,6 +55,7 @@ int TankPathSystem::command(int argc, myCONST_SPEC char ** argv)
 			animTcl::OutputMessage("system %s: unable to open file", m_name);
 			return TCL_ERROR;
 		}
+		hermite->reset(0.0);
 
 		std::string fileName;
 		int numPoints;
@@ -57,13 +70,11 @@ int TankPathSystem::command(int argc, myCONST_SPEC char ** argv)
 		}
 		myFile.close();
 		
-		//hermite->generateUniformCurve(uniformedHermite);
 		hermite->visible = true;
-		//uniformedHermite->visible = true;
 		hermite->generateLengthTable();
 
 		glutPostRedisplay();
-		
+		totalLength = hermite->getArcLength(1.0); // get total length
 
 	}
 	else if (strcmp(argv[0], "tFromLength") == 0)
@@ -74,7 +85,6 @@ int TankPathSystem::command(int argc, myCONST_SPEC char ** argv)
 			double l = atof(argv[1]);
 			hermite->getPointFromLength(p, t, l);
 			//animTcl::OutputMessage("t from length is %f, length = %f", result, length);
-
 		}
 	}
 
@@ -83,7 +93,12 @@ int TankPathSystem::command(int argc, myCONST_SPEC char ** argv)
 
 void TankPathSystem::reset(double time)
 {
-
+	zeroVector(m_pos);
+	zeroVector(m_axis);
+	arcLength = 0.0;
+	totalLength = 0.0;
+	data[0] = arcLength;
+	data[1] = totalLength;
 }
 
 void TankPathSystem::setPath(Hermite * path)
@@ -98,14 +113,28 @@ void TankPathSystem::setUniformedPath(Hermite * uniformedPath)
 
 void TankPathSystem::display(GLenum mode)
 {
-	animTcl::OutputMessage("arcLength = %f", arcLength);
+	
+	arcLength = data[0];
+	//animTcl::OutputMessage("arcLength = %f", arcLength);
 	hermite->getPointFromLength(m_pos, m_tangent, arcLength);
+
+	// calculate rotation
+	double angle = 0.0;
+	double yAxis[3] = { 0.0, -1.0, 0.0 };
+	Vector axis, normalizedTangent;
+	VecCopy(normalizedTangent, m_tangent);
+	VecNormalize(normalizedTangent);
+	quaternion.rotateAxis(yAxis, normalizedTangent);
+	quaternion.getAxisAngle(axis, &angle);
+	angle = angle * 180.0 / M_PI;
 
 	glEnable(GL_LIGHTING);
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	glPushAttrib(GL_ALL_ATTRIB_BITS);
 	glTranslated(m_pos[0], m_pos[1], m_pos[2]);
+	glRotated(90.0, 1.0, 0.0, 0.0);
+	glRotated(angle, axis[0], axis[2], axis[1]);
 	glScalef(0.01, 0.01, 0.01);
 
 	if (m_model.numvertices > 0)
@@ -115,6 +144,8 @@ void TankPathSystem::display(GLenum mode)
 
 	glPopMatrix();
 	glPopAttrib();
+
+
 }
 
 void TankPathSystem::loadModel()
@@ -122,6 +153,24 @@ void TankPathSystem::loadModel()
 	m_model.ReadOBJ("data/porsche.obj");
 	glmFacetNormals(&m_model);
 	glmVertexNormals(&m_model, 90);
+}
+
+void TankPathSystem::getPosition(Vector position, Vector tangent)
+{
+	VecCopy(position, m_pos);
+	VecCopy(tangent, m_tangent);
+}
+
+void TankPathSystem::updateData()
+{
+	data[0] = arcLength;
+	data[1] = totalLength;
+	data[2] = m_pos[0];
+	data[3] = m_pos[1];
+	data[4] = m_pos[2];
+	data[5] = m_tangent[0];
+	data[6] = m_tangent[1];
+	data[7] = m_tangent[2];
 }
 
 

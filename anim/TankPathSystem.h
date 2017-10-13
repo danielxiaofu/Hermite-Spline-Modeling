@@ -24,13 +24,25 @@ public:
 
 	void loadModel();
 
+	void getPosition(Vector position, Vector tangent);
+
 protected:
 	Hermite* hermite;
 	Hermite* uniformedHermite;
 
-	double arcLength = 0.0;
-	Vector m_pos, m_tangent;
+	double arcLength, totalLength;
+	Vector m_pos, m_tangent, m_axis;
+	Quaternion quaternion;
+
+	/* data of the tank path system, start from 0: 
+	arcLengh, totalLength, 
+	position.x, position.y, position.z, 
+	tangent.x, tangent.y, tangent.z
+	*/
+	double data[8];
 
 	GLMmodel m_model;
+
+	void updateData();
 };
 
