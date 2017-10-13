@@ -1,0 +1,16 @@
+﻿  vectorObj.cxx
+  vector.cxx
+  Timer.cpp
+  Quaternion.cxx
+  Picker.cpp
+  noise.cpp
+  myMath.cxx
+  image.cpp
+  GLutilities.cxx
+  FrameSaver.cpp
+  CoordSystem.cxx
+  BallMath.cxx
+  BallAux.cxx
+  Ball.cxx
+  Generating Code...
+  util.vcxproj -> C:\Users\Yixiao Yang\Documents\4491 Assignment\ComputerAnimationTemplate\util\../lib\util.lib
