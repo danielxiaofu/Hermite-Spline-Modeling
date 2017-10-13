@@ -21,6 +21,7 @@ public:
 
 protected:
 	Hermite* hermite;
+	bool crMode;
 
 };
 

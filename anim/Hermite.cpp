@@ -299,7 +299,6 @@ bool Hermite::setPoint(int index, double x, double y, double z)
 
 	VecCopy(controlPoints[index].point, newPoint);
 	recomputeSegment(index);
-	//generateLengthTable();
 	return true;
 }
 
@@ -310,12 +309,11 @@ bool Hermite::setTangent(int index, double x, double y, double z)
 	Vector newTangent;
 	newTangent[0] = x;
 	newTangent[1] = y;
-newTangent[2] = z;
+	newTangent[2] = z;
 
-VecCopy(controlPoints[index].tangent, newTangent);
-recomputeSegment(index);
-//generateLengthTable();
-return true;
+	VecCopy(controlPoints[index].tangent, newTangent);
+	recomputeSegment(index);
+	return true;
 }
 
 void Hermite::getPosition(Vector result, double t)
@@ -366,8 +364,14 @@ void Hermite::getTangent(Vector result, double t)
 
 void Hermite::generateLengthTable()
 {
-	double tEntry = 0;
+	if (segments.size() == 0)
+		return;
 
+	for (Segment segment : segments)
+		segment.generateLengthTable();
+
+	double tEntry = 0;
+	lengthMap.clear();
 	// first entry (t is 0);
 	lengthMap[0] = 0;
 	tEntry = 0 + lengthDeltaT;

@@ -524,7 +524,7 @@ int main(int argc, char **argv)
 #include <windows.h>
 
 // _ANSI_ARGS_ defined in tcl.h
-static void		setargv	_ANSI_ARGS_((int *argcPtr, char	***argvPtr));
+static void	setargv	_ANSI_ARGS_((int *argcPtr, char	***argvPtr));
 
 int APIENTRY
 WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,

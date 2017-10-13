@@ -132,48 +132,6 @@ void MakeScene(void)
 
 	/* SAMPLE SCENE */
 
-	bool success;
-
-	// register a system
-	SampleParticle* sphere1 = new SampleParticle( "sphere1" );
-
-	success = GlobalResourceManager::use()->addSystem( sphere1, true );
-
-
-	// make sure it was registered successfully
-	assert( success );
-
-	// register a simulator
-	SampleGravitySimulator* gravitySimulator = 
-		new SampleGravitySimulator( "gravity", sphere1 );
-
-	success = GlobalResourceManager::use()->addSimulator( gravitySimulator );
-
-	// make sure it was registered successfully
-	assert( success );
-
-	/* END SAMPLE SCENE */
-
-	// the following code shows you how to retrieve a system that was registered 
-	// with the resource manager. 
-
-	BaseSystem* sampleSystemRetrieval;
-
-	// retrieve the system
-	sampleSystemRetrieval = 
-		GlobalResourceManager::use()->getSystem( "sphere1" );
-
-	// make sure you got it
-	assert( sampleSystemRetrieval );
-
-	BaseSimulator* sampleSimulatorRetrieval;
-
-	// retrieve the simulator
-	sampleSimulatorRetrieval = 
-		GlobalResourceManager::use()->getSimulator( "gravity" );
-
-	// make sure you got it
-	assert( sampleSimulatorRetrieval );
 
 }	// MakeScene
 

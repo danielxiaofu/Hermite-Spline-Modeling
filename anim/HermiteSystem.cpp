@@ -6,7 +6,7 @@
 HermiteSystem::HermiteSystem(const std::string & name) :
 	BaseSystem(name)
 {
-
+	crMode = false;
 }
 
 void HermiteSystem::getState(double * p)
@@ -68,8 +68,12 @@ int HermiteSystem::command(int argc, myCONST_SPEC char ** argv)
 				double x = atof(argv[3]);
 				double y = atof(argv[4]);
 				double z = atof(argv[5]);
-				if(hermite->setPoint(index, x, y, z))
+				if (hermite->setPoint(index, x, y, z))
+				{
 					glutPostRedisplay();
+					hermite->generateLengthTable();
+				}
+					
 				else
 					animTcl::OutputMessage("system %s: set point failed, make sure the index is valid", m_name);
 			}
@@ -88,7 +92,10 @@ int HermiteSystem::command(int argc, myCONST_SPEC char ** argv)
 				double y = atof(argv[4]);
 				double z = atof(argv[5]);
 				if (hermite->setTangent(index, x, y, z))
+				{
 					glutPostRedisplay();
+					hermite->generateLengthTable();
+				}
 				else
 					animTcl::OutputMessage("system %s: set tangent failed, make sure the index is valid", m_name);
 			}
@@ -130,6 +137,7 @@ int HermiteSystem::command(int argc, myCONST_SPEC char ** argv)
 				double sy = atof(argv[6]);
 				double sz = atof(argv[7]);
 				hermite->addControlPoint(x, y, z, sx, sy, sz);
+				hermite->generateLengthTable();
 				glutPostRedisplay();
 			}
 			else
@@ -141,7 +149,19 @@ int HermiteSystem::command(int argc, myCONST_SPEC char ** argv)
 	}
 	else if (strcmp(argv[0], "cr") == 0)
 	{
-		
+		if (!crMode)
+		{
+			hermite->applyCR();
+			hermite->generateLengthTable();
+			crMode = true;
+		}
+		else
+		{
+			hermite->turnOffCR();
+			hermite->generateLengthTable();
+			crMode = false;
+		}
+		glutPostRedisplay();
 	}
 	else if (strcmp(argv[0], "export") == 0)
 	{
